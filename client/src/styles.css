@@ -1,0 +1,141 @@
+:root {
+  font-family: "Segoe UI", system-ui, sans-serif;
+  line-height: 1.5;
+  color: #1a1a1a;
+  background: #f6f7fb;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+a {
+  color: #2563eb;
+}
+
+.layout {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1rem 1.25rem 3rem;
+}
+
+nav.top {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 1.5rem;
+}
+
+nav.top a {
+  text-decoration: none;
+  font-weight: 600;
+}
+
+nav.top a:hover {
+  text-decoration: underline;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.dim {
+  font-size: 0.85rem;
+  color: #4b5563;
+  margin-bottom: 0.35rem;
+}
+
+.qtext {
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+.choice {
+  display: block;
+  margin: 0.35rem 0;
+  cursor: pointer;
+}
+
+.actions {
+  margin-top: 1.5rem;
+}
+
+button {
+  cursor: pointer;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #2563eb;
+  color: #fff;
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+}
+
+button.secondary {
+  background: #fff;
+  color: #1e293b;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+input,
+textarea {
+  width: 100%;
+  padding: 0.45rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  font: inherit;
+}
+
+label.field {
+  display: block;
+  margin-bottom: 0.75rem;
+}
+
+label.field span {
+  display: block;
+  font-size: 0.85rem;
+  margin-bottom: 0.25rem;
+  color: #374151;
+}
+
+.muted {
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.err {
+  color: #b91c1c;
+  margin-top: 0.5rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+th,
+td {
+  border: 1px solid #e5e7eb;
+  padding: 0.4rem 0.5rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  background: #f3f4f6;
+}

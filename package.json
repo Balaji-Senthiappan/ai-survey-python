@@ -1,0 +1,14 @@
+{
+  "name": "survey-ai-maturity",
+  "private": true,
+  "workspaces": ["client"],
+  "scripts": {
+    "dev": "concurrently -n api,client -c blue,green \"npm run dev:api\" \"npm run dev -w client\"",
+    "dev:api": "python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 3001 --app-dir backend",
+    "build": "npm run build -w client",
+    "start": "python -m uvicorn app.main:app --host 0.0.0.0 --port 3001 --app-dir backend"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
