@@ -1,0 +1,14 @@
+# Dependencies
+node_modules/
+.idea/
+*.zip
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+
+# OS files
+.DS_Store
