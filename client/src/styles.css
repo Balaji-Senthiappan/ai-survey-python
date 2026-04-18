@@ -659,16 +659,50 @@ th {
   margin-bottom: 0.65rem;
 }
 
-.assessment-respondent-name {
-  font-size: 1.05rem;
-  font-weight: 600;
-  color: var(--gray-900);
+.assessment-field {
+  display: block;
+  margin-top: 0.65rem;
 }
 
-.assessment-respondent-role {
-  font-size: 0.85rem;
+.assessment-field:first-of-type {
+  margin-top: 0.35rem;
+}
+
+.assessment-field__label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
   color: var(--gray-500);
-  margin-top: 0.15rem;
+  margin-bottom: 0.25rem;
+}
+
+.assessment-field__input {
+  display: block;
+  width: 100%;
+  font-family: var(--font-ui);
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--gray-900);
+  padding: 0.4rem 0;
+  border: none;
+  border-bottom: 1px solid var(--gray-200);
+  border-radius: 0;
+  background: transparent;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.assessment-field__input::placeholder {
+  color: var(--gray-400);
+  font-weight: 400;
+}
+
+.assessment-field__input:hover {
+  border-bottom-color: #cfcfcf;
+}
+
+.assessment-field__input:focus {
+  border-bottom-color: var(--tan);
 }
 
 .assessment-progress-head {

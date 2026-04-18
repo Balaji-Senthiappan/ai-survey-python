@@ -64,12 +64,27 @@ def survey_questions():
 
 class SubmitBody(BaseModel):
     answers: dict[str, str] | None = None
+    respondent_name: str | None = None
+    account_name: str | None = None
 
 
 @app.post("/api/survey/responses", status_code=201)
 def submit_responses(body: SubmitBody):
     if body.answers is None or not isinstance(body.answers, dict):
         raise HTTPException(status_code=400, detail={"error": "Missing answers object"})
+
+    respondent_name = (body.respondent_name or "").strip()
+    account_name = (body.account_name or "").strip()
+    if not respondent_name or not account_name:
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "respondent_name and account_name are required"},
+        )
+    if len(respondent_name) > 200 or len(account_name) > 200:
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "respondent_name and account_name must be at most 200 characters"},
+        )
 
     active = list_active_questions()
     active_ids = {q["id"] for q in active}
@@ -94,8 +109,11 @@ def submit_responses(body: SubmitBody):
 
     with transaction() as db:
         db.execute(
-            "INSERT INTO response_batches (id, submitted_at) VALUES (?, ?)",
-            (response_id, submitted_at),
+            """
+            INSERT INTO response_batches (id, submitted_at, respondent_name, account_name)
+            VALUES (?, ?, ?, ?)
+            """,
+            (response_id, submitted_at, respondent_name, account_name),
         )
         for q in active:
             letter: ChoiceLetter = body.answers[q["id"]]  # type: ignore[assignment]
@@ -111,6 +129,8 @@ def submit_responses(body: SubmitBody):
                 {
                     "response_id": response_id,
                     "submitted_at": submitted_at,
+                    "respondent_name": respondent_name,
+                    "account_name": account_name,
                     "question_id": q["id"],
                     "choice_letter": letter,
                     "score": score,
@@ -271,9 +291,18 @@ def admin_delete(qid: str):
 def results_summary():
     db = get_db()
     submissions = [
-        {"id": r[0], "submitted_at": r[1]}
+        {
+            "id": r[0],
+            "submitted_at": r[1],
+            "respondent_name": r[2] or "",
+            "account_name": r[3] or "",
+        }
         for r in db.execute(
-            "SELECT id, submitted_at FROM response_batches ORDER BY submitted_at DESC"
+            """
+            SELECT id, submitted_at, respondent_name, account_name
+            FROM response_batches
+            ORDER BY submitted_at DESC
+            """
         ).fetchall()
     ]
 

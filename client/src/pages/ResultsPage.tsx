@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 type Summary = {
   submission_count: number;
-  submissions: { id: string; submitted_at: string }[];
+  submissions: { id: string; submitted_at: string; respondent_name: string; account_name: string }[];
   dimension_summary: { dimension: string; average_score: number; answer_count: number }[];
   question_summary: {
     question_id: string;
@@ -93,6 +93,8 @@ export default function ResultsPage() {
       <table>
         <thead>
           <tr>
+            <th>Respondent</th>
+            <th>Account</th>
             <th>Response ID</th>
             <th>Submitted at (stored ISO)</th>
           </tr>
@@ -100,6 +102,8 @@ export default function ResultsPage() {
         <tbody>
           {data.submissions.map((s) => (
             <tr key={s.id}>
+              <td>{s.respondent_name || "—"}</td>
+              <td>{s.account_name || "—"}</td>
               <td style={{ fontFamily: "ui-monospace, monospace" }}>{s.id}</td>
               <td>{s.submitted_at}</td>
             </tr>

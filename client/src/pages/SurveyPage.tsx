@@ -18,6 +18,9 @@ type DimGroup = {
 const DEFAULT_SUBTITLE =
   "A comprehensive evaluation of artificial intelligence integration in software development practices.";
 
+const STORAGE_RESPONDENT = "assessment.respondentName";
+const STORAGE_ACCOUNT = "assessment.accountName";
+
 function splitChoiceHeadline(text: string): { lead: string; rest?: string } {
   const idx = text.indexOf(": ");
   if (idx < 8 || idx > 72) return { lead: text };
@@ -54,14 +57,19 @@ export default function SurveyPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [done, setDone] = useState<{ id: string; at: string } | null>(null);
+  const [done, setDone] = useState<{
+    id: string;
+    at: string;
+    respondentName: string;
+    accountName: string;
+  } | null>(null);
+  const [respondentNameInput, setRespondentNameInput] = useState("");
+  const [accountNameInput, setAccountNameInput] = useState("");
 
   const assessmentTitle = import.meta.env.VITE_ASSESSMENT_TITLE?.trim() || "AI Adoption Assessment";
   const assessmentSubtitle = import.meta.env.VITE_ASSESSMENT_SUBTITLE?.trim() || DEFAULT_SUBTITLE;
   const assessmentYear =
     import.meta.env.VITE_ASSESSMENT_YEAR?.trim() || String(new Date().getFullYear());
-  const respondentName = import.meta.env.VITE_RESPONDENT_NAME?.trim() || "—";
-  const respondentRole = import.meta.env.VITE_RESPONDENT_ROLE?.trim() || "—";
 
   const dimGroups = useMemo(() => groupDimensions(questions), [questions]);
 
@@ -69,6 +77,42 @@ export default function SurveyPage() {
     if (!questions.length) return false;
     return questions.every((q) => answers[q.id]);
   }, [questions, answers]);
+
+  const respondentTrimmed = respondentNameInput.trim();
+  const accountTrimmed = accountNameInput.trim();
+  const respondentMetaOk = Boolean(respondentTrimmed && accountTrimmed);
+  const canSubmit = allAnswered && respondentMetaOk;
+
+  useEffect(() => {
+    try {
+      const storedN = sessionStorage.getItem(STORAGE_RESPONDENT);
+      const storedA = sessionStorage.getItem(STORAGE_ACCOUNT);
+      const defaultN = import.meta.env.VITE_DEFAULT_RESPONDENT_NAME?.trim() ?? "";
+      const defaultA = import.meta.env.VITE_DEFAULT_ACCOUNT_NAME?.trim() ?? "";
+      if (storedN != null) setRespondentNameInput(storedN);
+      else if (defaultN) setRespondentNameInput(defaultN);
+      if (storedA != null) setAccountNameInput(storedA);
+      else if (defaultA) setAccountNameInput(defaultA);
+    } catch {
+      /* private mode / unavailable */
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(STORAGE_RESPONDENT, respondentNameInput);
+    } catch {
+      /* ignore */
+    }
+  }, [respondentNameInput]);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(STORAGE_ACCOUNT, accountNameInput);
+    } catch {
+      /* ignore */
+    }
+  }, [accountNameInput]);
 
   const answeredCount = useMemo(
     () => questions.filter((q) => Boolean(answers[q.id])).length,
@@ -125,11 +169,20 @@ export default function SurveyPage() {
       const res = await fetch("/api/survey/responses", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ answers }),
+        body: JSON.stringify({
+          answers,
+          respondent_name: respondentTrimmed,
+          account_name: accountTrimmed,
+        }),
       });
       if (!res.ok) throw new Error(await res.text());
       const data = (await res.json()) as { response_id: string; submitted_at: string };
-      setDone({ id: data.response_id, at: data.submitted_at });
+      setDone({
+        id: data.response_id,
+        at: data.submitted_at,
+        respondentName: respondentTrimmed,
+        accountName: accountTrimmed,
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Submit failed");
     } finally {
@@ -165,6 +218,12 @@ export default function SurveyPage() {
           <p className="assessment-muted">Your response was recorded.</p>
           <div className="assessment-done-details">
             <p>
+              <strong>Respondent:</strong> {done.respondentName}
+            </p>
+            <p>
+              <strong>Account:</strong> {done.accountName}
+            </p>
+            <p>
               <strong>Response ID:</strong> {done.id}
             </p>
             <p>
@@ -190,8 +249,30 @@ export default function SurveyPage() {
           <aside className="assessment-sidebar" aria-label="Progress and sections">
             <div className="assessment-sidebar__block">
               <div className="assessment-kicker">Respondent</div>
-              <div className="assessment-respondent-name">{respondentName}</div>
-              <div className="assessment-respondent-role">{respondentRole}</div>
+              <label className="assessment-field">
+                <span className="assessment-field__label">Name of respondent</span>
+                <input
+                  type="text"
+                  className="assessment-field__input"
+                  value={respondentNameInput}
+                  onChange={(e) => setRespondentNameInput(e.target.value)}
+                  autoComplete="name"
+                  maxLength={200}
+                  placeholder="Full name"
+                />
+              </label>
+              <label className="assessment-field">
+                <span className="assessment-field__label">Account name</span>
+                <input
+                  type="text"
+                  className="assessment-field__input"
+                  value={accountNameInput}
+                  onChange={(e) => setAccountNameInput(e.target.value)}
+                  autoComplete="organization"
+                  maxLength={200}
+                  placeholder="Team or account"
+                />
+              </label>
             </div>
 
             <div className="assessment-sidebar__block">
@@ -247,7 +328,7 @@ export default function SurveyPage() {
                 </div>
 
                 <h2 className="assessment-question assessment-serif" id={`q-head-${currentQ.id}`}>
-                  {currentQ.question_text}
+                  Q{questionIndex + 1}. {currentQ.question_text}
                 </h2>
 
                 <div
@@ -314,7 +395,7 @@ export default function SurveyPage() {
                     <button
                       type="button"
                       className="btn btn-primary"
-                      disabled={!allAnswered || submitting}
+                      disabled={!canSubmit || submitting}
                       onClick={() => void submit()}
                     >
                       {submitting ? "Submitting…" : "Submit assessment"}
@@ -339,8 +420,8 @@ export default function SurveyPage() {
           <form method="dialog">
             <h3 className="assessment-help-dialog__title">How to respond</h3>
             <p className="assessment-muted">
-              Pick the option that best describes your team today. You can move between sections from the
-              sidebar; submit when every question has an answer.
+              Enter your name and account in the sidebar, answer every question, then submit. You can jump
+              between dimensions using the list on the left.
             </p>
             <button type="submit" className="btn btn-primary assessment-help-dialog__close">
               Close

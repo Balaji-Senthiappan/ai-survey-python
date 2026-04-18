@@ -9,10 +9,10 @@ interface ImportMetaEnv {
   readonly VITE_ASSESSMENT_SUBTITLE?: string;
   /** Year shown next to the title (default: current calendar year). */
   readonly VITE_ASSESSMENT_YEAR?: string;
-  /** Sidebar respondent display name. */
-  readonly VITE_RESPONDENT_NAME?: string;
-  /** Sidebar respondent role or team line. */
-  readonly VITE_RESPONDENT_ROLE?: string;
+  /** Prefill "Name of respondent" when session storage is empty. */
+  readonly VITE_DEFAULT_RESPONDENT_NAME?: string;
+  /** Prefill "Account name" when session storage is empty. */
+  readonly VITE_DEFAULT_ACCOUNT_NAME?: string;
 }
 
 interface ImportMeta {

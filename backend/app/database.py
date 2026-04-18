@@ -95,6 +95,19 @@ def _migrate(db: sqlite3.Connection) -> None:
     """
     )
     db.commit()
+    _migrate_response_batch_metadata(db)
+
+
+def _migrate_response_batch_metadata(db: sqlite3.Connection) -> None:
+    cur = db.execute("PRAGMA table_info(response_batches)")
+    cols = {str(row[1]) for row in cur.fetchall()}
+    if "respondent_name" not in cols:
+        db.execute(
+            "ALTER TABLE response_batches ADD COLUMN respondent_name TEXT NOT NULL DEFAULT ''"
+        )
+    if "account_name" not in cols:
+        db.execute("ALTER TABLE response_batches ADD COLUMN account_name TEXT NOT NULL DEFAULT ''")
+    db.commit()
 
 
 def _seed_if_empty(db: sqlite3.Connection) -> None:
