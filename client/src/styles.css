@@ -464,9 +464,12 @@ th {
   overflow: auto;
 }
 
-.results-plotly h2 {
-  font-size: 1.1rem;
+.results-plotly h2,
+.results-plotly__h {
+  font-size: 1.05rem;
   margin: 0 0 0.5rem;
+  font-weight: 600;
+  color: var(--ink);
 }
 
 .results-plotly__controls {
@@ -483,6 +486,140 @@ th {
 
 .js-plotly-plot .plotly {
   max-width: 100%;
+}
+
+/* —— Results program view & recommendations —— */
+
+.results-page h2 {
+  margin-top: 1.75rem;
+  font-size: 1.15rem;
+}
+
+.results-methodology {
+  margin: 0.75rem 0 1.25rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #f8fafc;
+}
+
+.results-methodology summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.results-rec-intro {
+  margin-top: 0.25rem;
+  margin-bottom: 1rem;
+  max-width: 42rem;
+}
+
+.results-recommendations {
+  margin: 0 0 1.5rem;
+  padding: 0;
+  list-style: none;
+  counter-reset: rec;
+}
+
+.results-recommendation-card {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.results-recommendation-card__title {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.results-recommendation-card__score {
+  font-weight: 500;
+  color: var(--ink-muted);
+  font-size: 0.9rem;
+}
+
+.results-recommendation-card__why {
+  margin: 0 0 0.6rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.results-recommendation-card__label {
+  margin: 0 0 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ink-muted);
+}
+
+.results-recommendation-card__steps {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.results-recommendation-card__steps li {
+  margin-bottom: 0.4rem;
+}
+
+.results-table-outer {
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 0.5rem 0 1.25rem;
+}
+
+.results-dimension-details summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-weight: 600;
+  list-style: none;
+}
+
+.results-dimension-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.results-dimension-details {
+  min-width: 8rem;
+}
+
+.results-dimension-details[open] summary {
+  margin-bottom: 0.5rem;
+}
+
+.results-nested-table-wrap {
+  margin: 0.5rem 0 0;
+  min-width: 20rem;
+}
+
+table.results-nested-table {
+  font-size: 0.82rem;
+  box-shadow: none;
+  border-radius: var(--radius-sm);
+}
+
+.results-charts-details {
+  margin: 1.5rem 0 1.25rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #f8fafc;
+}
+
+.results-charts-details summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--accent);
 }
 
 /* —— Results spectrum (distributions) —— */
