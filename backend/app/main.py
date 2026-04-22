@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import uuid
+from collections import Counter, defaultdict
 from datetime import datetime, timezone
+from statistics import median
 from typing import Any, cast
 
 from fastapi import FastAPI, HTTPException, Request
@@ -308,7 +310,8 @@ def results_summary():
 
     answers = db.execute(
         """
-    SELECT ra.response_id, ra.question_id, ra.choice_letter, ra.score, q.dimension, q.question_text
+    SELECT ra.response_id, ra.question_id, ra.choice_letter, ra.score, q.dimension, q.question_text,
+           q.choice_a, q.choice_b, q.choice_c, q.choice_d
     FROM response_answers ra
     JOIN questions q ON q.id = ra.question_id
     ORDER BY ra.submitted_at ASC
@@ -316,6 +319,7 @@ def results_summary():
     ).fetchall()
 
     per_dimension: dict[str, dict[str, float | int]] = {}
+    per_resp_dim: dict[tuple[str, str], dict[str, float | int]] = {}
     for a in answers:
         dim = str(a[4])
         cur = per_dimension.get(dim) or {"sum": 0, "count": 0}
@@ -323,14 +327,46 @@ def results_summary():
         cur["count"] = int(cur["count"]) + 1
         per_dimension[dim] = cur
 
-    dimension_summary = [
-        {
+        rid = str(a[0])
+        rdk = (rid, dim)
+        rcur = per_resp_dim.get(rdk) or {"sum": 0, "count": 0}
+        rcur["sum"] = float(rcur["sum"]) + int(a[3])
+        rcur["count"] = int(rcur["count"]) + 1
+        per_resp_dim[rdk] = rcur
+
+    dim_to_respondent_means: dict[str, list[float]] = defaultdict(list)
+    for (rid, dim), agg in per_resp_dim.items():
+        c = int(agg["count"])
+        if c:
+            dim_to_respondent_means[dim].append(float(agg["sum"]) / c)
+
+    def _dim_spread(respondent_means: list[float]) -> dict[str, Any]:
+        if not respondent_means:
+            return {
+                "respondent_mean_min": 0.0,
+                "respondent_mean_max": 0.0,
+                "respondent_mean_median": 0.0,
+                "respondent_n": 0,
+                "respondent_means": [],
+            }
+        srt = sorted(respondent_means)
+        return {
+            "respondent_mean_min": srt[0],
+            "respondent_mean_max": srt[-1],
+            "respondent_mean_median": float(median(srt)),
+            "respondent_n": len(srt),
+            "respondent_means": srt,
+        }
+
+    dimension_summary = []
+    for d, v in per_dimension.items():
+        row: dict[str, Any] = {
             "dimension": d,
             "average_score": (v["sum"] / v["count"]) if v["count"] else 0,
             "answer_count": int(v["count"]),
         }
-        for d, v in per_dimension.items()
-    ]
+        row.update(_dim_spread(dim_to_respondent_means[d]))
+        dimension_summary.append(row)
 
     by_question: dict[str, dict[str, Any]] = {}
     for a in answers:
@@ -340,23 +376,42 @@ def results_summary():
                 "question_id": qid,
                 "dimension": str(a[4]),
                 "question_text": str(a[5]),
+                "choice_a": str(a[6]),
+                "choice_b": str(a[7]),
+                "choice_c": str(a[8]),
+                "choice_d": str(a[9]),
+                "choice_counts": {"A": 0, "B": 0, "C": 0, "D": 0},
                 "scores": [],
             }
+        letter = str(a[2])
+        if letter in by_question[qid]["choice_counts"]:
+            by_question[qid]["choice_counts"][letter] = int(
+                by_question[qid]["choice_counts"][letter]
+            ) + 1
         by_question[qid]["scores"].append(int(a[3]))
 
     question_summary = []
     for q in by_question.values():
         scores: list[int] = q["scores"]
         avg = sum(scores) / len(scores) if scores else 0
+        score_dist = [{"score": s, "count": c} for s, c in sorted(Counter(scores).items())]
         question_summary.append(
             {
                 "question_id": q["question_id"],
                 "dimension": q["dimension"],
                 "question_text": q["question_text"],
+                "choice_a": q["choice_a"],
+                "choice_b": q["choice_b"],
+                "choice_c": q["choice_c"],
+                "choice_d": q["choice_d"],
+                "choice_counts": q["choice_counts"],
+                "score_distribution": score_dist,
                 "average_score": avg,
                 "n": len(scores),
             }
         )
+
+    question_summary.sort(key=lambda row: str(row["question_id"]))
 
     return {
         "submission_count": len(submissions),

@@ -456,6 +456,87 @@ th {
   color: var(--ink-muted);
 }
 
+/* —— Results spectrum (distributions) —— */
+
+.results-spectrum-bar {
+  display: flex;
+  width: 100%;
+  min-width: 8rem;
+  max-width: 18rem;
+  height: 0.5rem;
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--border);
+}
+
+.results-spectrum-bar__seg {
+  min-width: 0;
+  flex-shrink: 0;
+  height: 100%;
+  transition: opacity 0.12s;
+}
+
+.results-spectrum-bar__seg--a {
+  background: #1e3a5f;
+}
+
+.results-spectrum-bar__seg--b {
+  background: #2d5a8a;
+}
+
+.results-spectrum-bar__seg--c {
+  background: #3b6fa5;
+}
+
+.results-spectrum-bar__seg--d {
+  background: #6b8fb8;
+}
+
+.results-spectrum-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.75rem;
+  margin: 0.35rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.78rem;
+  color: var(--ink-muted);
+  line-height: 1.3;
+  max-width: 28rem;
+}
+
+.results-spectrum-legend kbd {
+  display: inline-block;
+  min-width: 1.1rem;
+  text-align: center;
+  font-family: inherit;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.05rem 0.2rem;
+  background: #f1f5f9;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  margin-right: 0.1rem;
+}
+
+.results-sparkline {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 1.4rem;
+  min-width: 2.5rem;
+  max-width: 6rem;
+  margin-top: 0.2rem;
+}
+
+.results-sparkline__tick {
+  flex: 1;
+  min-width: 2px;
+  max-width: 0.4rem;
+  background: #64748b;
+  border-radius: 1px;
+}
+
 /* —— Assessment (Figma-aligned) —— */
 
 .sr-only {
