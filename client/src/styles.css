@@ -456,6 +456,35 @@ th {
   color: var(--ink-muted);
 }
 
+/* —— Results Plotly —— */
+
+.results-plotly {
+  margin: 1.5rem 0 2rem;
+  max-width: 100%;
+  overflow: auto;
+}
+
+.results-plotly h2 {
+  font-size: 1.1rem;
+  margin: 0 0 0.5rem;
+}
+
+.results-plotly__controls {
+  margin: 0 0 0.75rem;
+}
+
+.results-plotly__chart {
+  min-height: 380px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.5rem;
+  background: var(--surface);
+}
+
+.js-plotly-plot .plotly {
+  max-width: 100%;
+}
+
 /* —— Results spectrum (distributions) —— */
 
 .results-spectrum-bar {

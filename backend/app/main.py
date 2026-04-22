@@ -278,6 +278,33 @@ def admin_put(qid: str, body: AdminPatchBody):
     return {"ok": True}
 
 
+@app.post("/api/admin/recalculate-response-scores")
+def admin_recalculate_response_scores():
+    """
+    Recompute every response_answers.score from the current question rubric
+    (score_a..d) and choice_letter. New submissions always snapshot scores at submit time;
+    this overwrites older snapshots to match a changed rubric so results/aggregates and DB stay aligned.
+    Does not change historical CSV file rows on disk.
+    """
+    db = get_db()
+    cur = db.execute("SELECT id, question_id, choice_letter FROM response_answers")
+    n = 0
+    for row in cur.fetchall():
+        aid = int(row[0])
+        qid = str(row[1])
+        letter = str(row[2])
+        if letter not in ("A", "B", "C", "D"):
+            continue
+        q = get_question_by_id(qid)
+        if not q:
+            continue
+        score = get_score_for_choice(q, cast(ChoiceLetter, letter))
+        db.execute("UPDATE response_answers SET score = ? WHERE id = ?", (score, aid))
+        n += 1
+    db.commit()
+    return {"ok": True, "answer_rows_updated": n}
+
+
 @app.delete("/api/admin/questions/{qid}")
 def admin_delete(qid: str):
     existing = get_question_by_id(qid)
@@ -291,6 +318,10 @@ def admin_delete(qid: str):
 
 @app.get("/api/results/summary")
 def results_summary():
+    """
+    Aggregates use response_answers.score (snapshot at submit, or after admin recalculate).
+    They are not recomputed from the live questions table on each request.
+    """
     db = get_db()
     submissions = [
         {

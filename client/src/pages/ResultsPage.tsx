@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import ResultsPlotSection from "./ResultsPlotSection";
 
 const LETTERS = ["A", "B", "C", "D"] as const;
 type Letter = (typeof LETTERS)[number];
@@ -152,8 +153,13 @@ export default function ResultsPage() {
         Submissions recorded: <strong>{data.submission_count}</strong>. Averages are simple means of
         per-answer scores. The <strong>choice mix</strong> bar shows how often each option (A–D) was
         selected; for each dimension, <strong>per-respondent</strong> spread uses the mean of that
-        person’s answers in the dimension, so you can see alignment or variation across people.
+        person’s answers in the dimension, so you can see alignment or variation across people. Any
+        numeric value here is based on the <strong>score stored on each answer at submit time</strong>{" "}
+        (or after an admin <strong>recalculate</strong> in Admin). If you only change a question’s
+        rubric in Admin, old answers keep their previous stored scores until you recalc.
       </p>
+
+      <ResultsPlotSection questions={data.question_summary} />
 
       <h2>By dimension</h2>
       <table>

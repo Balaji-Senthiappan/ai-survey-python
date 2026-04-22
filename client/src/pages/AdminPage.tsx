@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type Question = {
   id: string;
@@ -16,6 +16,8 @@ type Question = {
   is_active: number;
 };
 
+type ScoreDraft = { score_a: number; score_b: number; score_c: number; score_d: number };
+
 const emptyForm = {
   dimension: "",
   question_text: "",
@@ -29,11 +31,25 @@ const emptyForm = {
   score_d: 9,
 };
 
+function scoresFromRow(r: Question): ScoreDraft {
+  return {
+    score_a: r.score_a,
+    score_b: r.score_b,
+    score_c: r.score_c,
+    score_d: r.score_d,
+  };
+}
+
 export default function AdminPage() {
   const [rows, setRows] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState<ScoreDraft | null>(null);
+  const [savingScores, setSavingScores] = useState(false);
+  const [recalcStatus, setRecalcStatus] = useState<string | null>(null);
+  const [recalculating, setRecalculating] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -71,6 +87,87 @@ export default function AdminPage() {
     }
   }
 
+  const startEditScores = useCallback((r: Question) => {
+    setEditingId(r.id);
+    setEditDraft(scoresFromRow(r));
+    setError(null);
+  }, []);
+
+  const cancelEditScores = useCallback(() => {
+    setEditingId(null);
+    setEditDraft(null);
+  }, []);
+
+  async function saveEditScores() {
+    if (!editingId || !editDraft) return;
+    setSavingScores(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/questions/${editingId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          score_a: editDraft.score_a,
+          score_b: editDraft.score_b,
+          score_c: editDraft.score_c,
+          score_d: editDraft.score_d,
+        }),
+      });
+      if (!res.ok) {
+        const t = await res.text();
+        try {
+          const j = JSON.parse(t) as { error?: string };
+          throw new Error(j.error || t);
+        } catch (e) {
+          if (e instanceof SyntaxError) throw new Error(t);
+          throw e;
+        }
+      }
+      cancelEditScores();
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setSavingScores(false);
+    }
+  }
+
+  async function recalculateStoredScores() {
+    if (
+      !confirm(
+        "Recompute all stored answer scores from the current question rubric? Use this after changing A–D scores on existing questions so that results match the new scale. Historical CSV export rows are not changed.",
+      )
+    ) {
+      return;
+    }
+    setRecalculating(true);
+    setRecalcStatus(null);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/recalculate-response-scores", { method: "POST" });
+      if (!res.ok) {
+        const t = await res.text();
+        try {
+          const j = JSON.parse(t) as { error?: string };
+          throw new Error(j.error || t);
+        } catch (e) {
+          if (e instanceof SyntaxError) throw new Error(t);
+          throw e;
+        }
+      }
+      const j = (await res.json()) as { answer_rows_updated?: number };
+      setRecalcStatus(
+        j.answer_rows_updated != null
+          ? `Updated ${j.answer_rows_updated} stored answer row(s).`
+          : "Done.",
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Recalculate failed");
+    } finally {
+      setRecalculating(false);
+    }
+  }
+
   async function deactivate(id: string) {
     if (!confirm("Deactivate this question? It will be hidden from new surveys.")) return;
     setError(null);
@@ -89,7 +186,21 @@ export default function AdminPage() {
     <div>
       <h1>Admin — questions</h1>
       <p className="muted">
-        Scores default to 0 / 3 / 6 / 9 for choices A–D. Edit via API or future edit form as needed.
+        Scores default to 0 / 3 / 6 / 9 for choices A–D. <strong>Changing scores</strong> updates the
+        rubric for <em>new</em> survey submissions. Submissions that are already in the database keep
+        their <strong>stored</strong> numeric score until you run recalc below. Export CSV at submit
+        time still reflects the value stored then.
+      </p>
+      <p className="actions" style={{ marginTop: "0.75rem" }}>
+        <button
+          type="button"
+          className="secondary"
+          disabled={recalculating}
+          onClick={() => void recalculateStoredScores()}
+        >
+          {recalculating ? "Recalculating…" : "Recalculate stored answer scores from current rubric"}
+        </button>
+        {recalcStatus ? <span className="muted" style={{ marginLeft: "0.75rem" }}>{recalcStatus}</span> : null}
       </p>
 
       <div className="card">
@@ -170,14 +281,57 @@ export default function AdminPage() {
               <td>{r.dimension}</td>
               <td>{r.question_text}</td>
               <td>
-                {r.score_a},{r.score_b},{r.score_c},{r.score_d}
+                {editingId === r.id && editDraft ? (
+                  <div
+                    className="admin-score-grid"
+                    style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(3rem, 1fr))", gap: "0.35rem", maxWidth: "20rem" }}
+                  >
+                    {(["a", "b", "c", "d"] as const).map((k) => (
+                      <label key={k} className="field" style={{ margin: 0 }}>
+                        <span style={{ fontSize: "0.75rem" }}>{k.toUpperCase()}</span>
+                        <input
+                          type="number"
+                          value={editDraft[`score_${k}`]}
+                          onChange={(e) =>
+                            setEditDraft((d) =>
+                              d
+                                ? {
+                                    ...d,
+                                    [`score_${k}`]: Number(e.target.value),
+                                  }
+                                : d,
+                            )
+                          }
+                        />
+                      </label>
+                    ))}
+                  </div>
+                ) : (
+                  `${r.score_a},${r.score_b},${r.score_c},${r.score_d}`
+                )}
               </td>
               <td>
-                {r.is_active ? (
-                  <button type="button" className="secondary" onClick={() => void deactivate(r.id)}>
-                    Deactivate
-                  </button>
-                ) : null}
+                {editingId === r.id ? (
+                  <div className="actions" style={{ flexDirection: "column", alignItems: "stretch" }}>
+                    <button type="button" disabled={savingScores} onClick={() => void saveEditScores()}>
+                      {savingScores ? "Saving…" : "Save scores"}
+                    </button>
+                    <button type="button" className="secondary" disabled={savingScores} onClick={cancelEditScores}>
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <div className="actions" style={{ flexDirection: "column" }}>
+                    <button type="button" className="secondary" onClick={() => startEditScores(r)}>
+                      Edit scores
+                    </button>
+                    {r.is_active ? (
+                      <button type="button" className="secondary" onClick={() => void deactivate(r.id)}>
+                        Deactivate
+                      </button>
+                    ) : null}
+                  </div>
+                )}
               </td>
             </tr>
           ))}
