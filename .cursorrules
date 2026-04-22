@@ -1,0 +1,28 @@
+# Survey AI Maturity — Cursor rules
+
+## What this is
+
+- **Backend**: FastAPI in `backend/app/` (run via root `package.json`: `uvicorn app.main:app --app-dir backend`, default port **3001**).
+- **Frontend**: Vite + React + TypeScript in `client/` (port **5173** in dev). Uses `fetch("/api/...")` — proxied to the API in dev; keep client and server contracts in sync.
+- **Data**: SQLite (`database.py` init + `_migrate_*`), optional CSV export in `csv_export.py`. Schema changes belong in migrations there, not ad-hoc SQL files.
+
+## When changing behavior
+
+- **API**: Update Pydantic models, route handlers, and any CSV/DB writes together. Prefer `HTTPException` with `detail={"error": "..."}` for consistent JSON errors.
+- **Survey submit**: Body includes `answers`, `respondent_name`, and `account_name` (required, trimmed, length limits). Do not drop these from the client or server without an explicit product decision.
+- **Client**: Prefer extending `client/src/styles.css` and existing page components over new CSS frameworks. The survey route uses the assessment layout in `SurveyPage.tsx` — preserve accessibility (labels, `radiogroup`, keyboard).
+
+## Conventions
+
+- **Python**: Type hints, `from __future__ import annotations` where the file already uses it; keep DB access behind `database.py` patterns (`transaction()`, `get_db()`).
+- **TypeScript/React**: Functional components; explicit types for API JSON; env vars prefixed with `VITE_*` and declared in `client/src/vite-env.d.ts` when new ones are added.
+- **Diffs**: Make the smallest change that satisfies the request. Avoid drive-by refactors, unrelated formatting, and new markdown/docs unless asked.
+
+## Commands (sanity check)
+
+- Root: `npm run dev` — API + client together.
+- Client only: `npm run dev -w client` from repo root.
+
+## Design / UX
+
+- Figma-aligned assessment UI uses a tan/neutral palette and sidebar + single-question flow; keep new UI consistent with existing assessment classes (`assessment-*`).
