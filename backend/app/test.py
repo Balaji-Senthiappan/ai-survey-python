@@ -9,18 +9,18 @@ import unittest
 import uuid
 from pathlib import Path
 
-# main.py uses flat imports (e.g. csv_export); add backend/app/ to the path
-_app_dir = Path(__file__).resolve().parent
-if str(_app_dir) not in sys.path:
-    sys.path.insert(0, str(_app_dir))
+# Package imports in main (app.*) require the backend/ directory on sys.path.
+_backend_dir = Path(__file__).resolve().parent.parent
+if str(_backend_dir) not in sys.path:
+    sys.path.insert(0, str(_backend_dir))
 
 _tmp = tempfile.mkdtemp()
 os.environ["DATA_DIR"] = _tmp
 
 from fastapi.testclient import TestClient
 
-from main import app
-from database import get_db
+from app.main import app
+from app.database import get_db
 
 
 def _reset_and_seed_one_question() -> str:

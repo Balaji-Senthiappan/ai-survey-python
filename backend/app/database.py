@@ -8,7 +8,7 @@ import threading
 from contextlib import contextmanager
 from typing import Any, Literal, TypedDict
 
-from settings import DATA_DIR, DB_FILE, SEED_QUESTIONS_CSV
+from .settings import DATA_DIR, DB_FILE, SEED_QUESTIONS_CSV
 
 ChoiceLetter = Literal["A", "B", "C", "D"]
 

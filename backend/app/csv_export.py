@@ -5,7 +5,7 @@ from __future__ import annotations
 import csv
 from pathlib import Path
 
-from settings import DATA_DIR, RESPONSES_CSV
+from .settings import DATA_DIR, RESPONSES_CSV
 
 OLD_HEADER = "response_id,submitted_at,question_id,choice_letter,score"
 NEW_HEADER = "response_id,submitted_at,respondent_name,account_name,question_id,choice_letter,score"
