@@ -1,12 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { buildTopRecommendations } from "../resultsRecommendations";
 import ResultsPlotSection from "./ResultsPlotSection";
+import ResultsDimensionPlot from "./ResultsDimensionPlot";
 
 const LETTERS = ["A", "B", "C", "D"] as const;
 type Letter = (typeof LETTERS)[number];
 
 type ChoiceCounts = Record<Letter, number>;
 
-type Summary = {
+export type Summary = {
   submission_count: number;
   submissions: { id: string; submitted_at: string; respondent_name: string; account_name: string }[];
   dimension_summary: {
@@ -48,11 +50,7 @@ function labelForLetter(
   return q[k];
 }
 
-function ChoiceDistribution({
-  q,
-}: {
-  q: Summary["question_summary"][number];
-}) {
+function ChoiceDistribution({ q }: { q: Summary["question_summary"][number] }) {
   const total = LETTERS.reduce((s, L) => s + q.choice_counts[L], 0);
   if (total === 0) {
     return <span className="muted">—</span>;
@@ -104,12 +102,12 @@ function RespondentsSparkline({ means }: { means: number[] }) {
   const hi = Math.max(...means);
   const span = hi - lo;
   return (
-    <div className="results-sparkline" title={`Per-respondent means in this dimension: ${means.map((m) => m.toFixed(2)).join(", ")}`}>
+    <div
+      className="results-sparkline"
+      title={`Per-respondent means in this dimension: ${means.map((m) => m.toFixed(2)).join(", ")}`}
+    >
       {means.map((m, i) => {
-        const h =
-          span < 1e-9
-            ? 50
-            : ((m - lo) / span) * 100;
+        const h = span < 1e-9 ? 50 : ((m - lo) / span) * 100;
         return (
           <div
             key={i}
@@ -118,6 +116,40 @@ function RespondentsSparkline({ means }: { means: number[] }) {
           />
         );
       })}
+    </div>
+  );
+}
+
+function QuestionTable({ questions }: { questions: Summary["question_summary"] }) {
+  if (questions.length === 0) {
+    return <p className="muted">No questions in this dimension.</p>;
+  }
+  return (
+    <div className="results-nested-table-wrap">
+      <table className="results-nested-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Question</th>
+            <th>Choice mix</th>
+            <th>Avg</th>
+            <th>n</th>
+          </tr>
+        </thead>
+        <tbody>
+          {questions.map((q) => (
+            <tr key={q.question_id}>
+              <td style={{ whiteSpace: "nowrap" }}>{q.question_id}</td>
+              <td>{q.question_text}</td>
+              <td>
+                <ChoiceDistribution q={q} />
+              </td>
+              <td>{q.average_score.toFixed(2)}</td>
+              <td>{q.n}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -143,111 +175,190 @@ export default function ResultsPage() {
     };
   }, []);
 
+  const recommendations = useMemo(
+    () => (data ? buildTopRecommendations(data.dimension_summary) : []),
+    [data],
+  );
+
   if (error) return <p className="err">{error}</p>;
   if (!data) return <p className="muted">Loading results…</p>;
 
   return (
-    <div>
+    <div className="results-page">
       <h1>Survey results</h1>
       <p className="muted">
-        Submissions recorded: <strong>{data.submission_count}</strong>. Averages are simple means of
-        per-answer scores. The <strong>choice mix</strong> bar shows how often each option (A–D) was
-        selected; for each dimension, <strong>per-respondent</strong> spread uses the mean of that
-        person’s answers in the dimension, so you can see alignment or variation across people. Any
-        numeric value here is based on the <strong>score stored on each answer at submit time</strong>{" "}
-        (or after an admin <strong>recalculate</strong> in Admin). If you only change a question’s
-        rubric in Admin, old answers keep their previous stored scores until you recalc.
+        <strong>Program view</strong> — dimensions first. Open <strong>question details</strong> per
+        row when you need drill-down. Averages are simple means of per-answer scores; values reflect
+        scores stored at submit (or after admin recalculate).
       </p>
 
-      <ResultsPlotSection questions={data.question_summary} />
+      <details className="results-methodology">
+        <summary>How to read methodology and data</summary>
+        <p className="muted">
+          The <strong>choice mix</strong> bar shows how often each option (A–D) was selected. For each
+          dimension, <strong>per-respondent</strong> spread is the mean of that person’s answers in the
+          dimension, so you can see alignment or variation. If a question’s rubric changes in Admin,
+          use recalculate so stored answers match the new scale for analytics and exports.
+        </p>
+      </details>
+
+      <h2>Top recommendations — what to improve next</h2>
+      <p className="muted results-rec-intro">
+        Priorities are based on the <strong>lowest</strong> program average scores by dimension. Each
+        item includes actions typical of well-run technology adoption programs; tailor owners and dates
+        to your organization.
+      </p>
+      {recommendations.length === 0 ? (
+        <p className="muted">Not enough dimension data to rank improvements yet.</p>
+      ) : (
+        <ol className="results-recommendations">
+          {recommendations.map((r) => (
+            <li key={r.dimension} className="results-recommendation-card">
+              <h3 className="results-recommendation-card__title">
+                {r.rank}. {r.dimension}{" "}
+                <span className="results-recommendation-card__score">(program avg {r.averageScore.toFixed(2)})</span>
+              </h3>
+              <p className="results-recommendation-card__why">{r.rationale}</p>
+              <p className="results-recommendation-card__label">Actionable next steps</p>
+              <ol className="results-recommendation-card__steps">
+                {r.actionSteps.map((s, i) => (
+                  <li key={i}>{s}</li>
+                ))}
+              </ol>
+            </li>
+          ))}
+        </ol>
+      )}
+
+      <h2>Visual summary — scores by dimension</h2>
+      {data.dimension_summary.length > 0 ? (
+        <ResultsDimensionPlot dimensions={data.dimension_summary} />
+      ) : (
+        <p className="muted">No dimensions to plot.</p>
+      )}
 
       <h2>By dimension</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Dimension</th>
-            <th>Average score</th>
-            <th>Per-respondent spread</th>
-            <th>Answers (rows)</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.dimension_summary.map((d) => (
-            <tr key={d.dimension}>
-              <td>{d.dimension}</td>
-              <td>{d.average_score.toFixed(2)}</td>
-              <td>
-                {d.respondent_n === 0 ? (
-                  <span className="muted">—</span>
-                ) : (
-                  <div>
-                    <span>
-                      min {d.respondent_mean_min.toFixed(2)} · med{" "}
-                      {d.respondent_mean_median.toFixed(2)} · max {d.respondent_mean_max.toFixed(2)}
-                    </span>
-                    <span className="muted" style={{ display: "block", fontSize: "0.85rem" }}>
-                      {d.respondent_n} respondent{d.respondent_n === 1 ? "" : "s"} with at least one
-                      answer in this dimension
-                    </span>
-                    <RespondentsSparkline means={d.respondent_means} />
-                  </div>
-                )}
-              </td>
-              <td>{d.answer_count}</td>
+      <p className="muted">Use <strong>question details</strong> to see each question in that dimension.</p>
+      <div className="results-table-outer">
+        <table>
+          <thead>
+            <tr>
+              <th>Dimension</th>
+              <th>Average score</th>
+              <th>Per-respondent spread</th>
+              <th>Answers (rows)</th>
+              <th>Question details</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {data.dimension_summary.map((d) => {
+              const qs = data.question_summary.filter((q) => q.dimension === d.dimension);
+              return (
+                <tr key={d.dimension}>
+                  <td>{d.dimension}</td>
+                  <td>{d.average_score.toFixed(2)}</td>
+                  <td>
+                    {d.respondent_n === 0 ? (
+                      <span className="muted">—</span>
+                    ) : (
+                      <div>
+                        <span>
+                          min {d.respondent_mean_min.toFixed(2)} · med{" "}
+                          {d.respondent_mean_median.toFixed(2)} · max {d.respondent_mean_max.toFixed(2)}
+                        </span>
+                        <span className="muted" style={{ display: "block", fontSize: "0.85rem" }}>
+                          {d.respondent_n} respondent{d.respondent_n === 1 ? "" : "s"} with at least
+                          one answer
+                        </span>
+                        <RespondentsSparkline means={d.respondent_means} />
+                      </div>
+                    )}
+                  </td>
+                  <td>{d.answer_count}</td>
+                  <td>
+                    <details className="results-dimension-details">
+                      <summary>
+                        {qs.length === 0
+                          ? "No questions"
+                          : `View ${qs.length} question${qs.length === 1 ? "" : "s"}`}
+                      </summary>
+                      <QuestionTable questions={qs} />
+                    </details>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
 
-      <h2>By question</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Dimension</th>
-            <th>Question</th>
-            <th>Choice mix</th>
-            <th>Avg</th>
-            <th>n</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.question_summary.map((q) => (
-            <tr key={q.question_id}>
-              <td style={{ whiteSpace: "nowrap" }}>{q.question_id}</td>
-              <td>{q.dimension}</td>
-              <td>{q.question_text}</td>
-              <td>
-                <ChoiceDistribution q={q} />
-              </td>
-              <td>{q.average_score.toFixed(2)}</td>
-              <td>{q.n}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {data.question_summary.length > 0 ? (
+        <details className="results-charts-details">
+          <summary>Detailed charts (by question)</summary>
+          <p className="muted">
+            Interactive question-level charts. Use the dimension filter inside to narrow the view.
+          </p>
+          <ResultsPlotSection questions={data.question_summary} />
+        </details>
+      ) : null}
+
+      {data.question_summary.length > 0 ? (
+        <details className="results-charts-details">
+          <summary>All questions (full list)</summary>
+          <div className="results-table-outer">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Dimension</th>
+                  <th>Question</th>
+                  <th>Choice mix</th>
+                  <th>Avg</th>
+                  <th>n</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.question_summary.map((q) => (
+                  <tr key={q.question_id}>
+                    <td style={{ whiteSpace: "nowrap" }}>{q.question_id}</td>
+                    <td>{q.dimension}</td>
+                    <td>{q.question_text}</td>
+                    <td>
+                      <ChoiceDistribution q={q} />
+                    </td>
+                    <td>{q.average_score.toFixed(2)}</td>
+                    <td>{q.n}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </details>
+      ) : null}
 
       <h2>Recent submissions</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Respondent</th>
-            <th>Account</th>
-            <th>Response ID</th>
-            <th>Submitted at (stored ISO)</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.submissions.map((s) => (
-            <tr key={s.id}>
-              <td>{s.respondent_name || "—"}</td>
-              <td>{s.account_name || "—"}</td>
-              <td style={{ fontFamily: "ui-monospace, monospace" }}>{s.id}</td>
-              <td>{s.submitted_at}</td>
+      <div className="results-table-outer">
+        <table>
+          <thead>
+            <tr>
+              <th>Respondent</th>
+              <th>Account</th>
+              <th>Response ID</th>
+              <th>Submitted at (stored ISO)</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {data.submissions.map((s) => (
+              <tr key={s.id}>
+                <td>{s.respondent_name || "—"}</td>
+                <td>{s.account_name || "—"}</td>
+                <td style={{ fontFamily: "ui-monospace, monospace" }}>{s.id}</td>
+                <td>{s.submitted_at}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

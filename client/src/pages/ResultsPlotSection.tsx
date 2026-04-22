@@ -90,7 +90,7 @@ export default function ResultsPlotSection({ questions }: Props) {
 
   return (
     <div className="results-plotly">
-      <h2>Interactive charts</h2>
+      <h3 className="results-plotly__h">Interactive charts (by question)</h3>
       <p className="results-plotly__controls">
         <label className="field" style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem" }}>
           <span>Dimension</span>
